@@ -1,0 +1,143 @@
+// Pines motores
+#define IN1 16 // Motor delantero Izq
+#define IN2 17
+#define IN3 18 // Motor delantero Der
+#define IN4 19
+#define IN5 25 // Motor trasero Izq
+#define IN6 33
+#define IN7 27 // Motor trasero Der
+#define IN8 26
+
+void setup() {
+  pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
+  pinMode(IN5, OUTPUT); pinMode(IN6, OUTPUT);
+  pinMode(IN7, OUTPUT); pinMode(IN8, OUTPUT);
+}
+
+void loop() {
+  recorrerCuadrado(30);   // Movimiento de cuadrado de 30cm
+  rutinaBaileOmni();       // Rutina de baile divertida
+  detener();
+  delay(3000);             // Espera antes de repetir
+}
+
+// 📦 Recorre un cuadrado de lado "ladoCM"
+void recorrerCuadrado(int ladoCM) {
+  int tiempoRecto = calcularTiempoAvanzar(ladoCM);
+  int tiempoGiro90 = 600; // Ajustar con pruebas
+
+  for (int i = 0; i < 4; i++) {
+    moverAdelante();
+    delay(tiempoRecto);
+    detener();
+    delay(200);
+
+    girarDerecha();
+    delay(tiempoGiro90);
+    detener();
+    delay(200);
+  }
+}
+
+// 💃 Rutina de baile para ruedas OMNI
+void rutinaBaileOmni() {
+  for (int i = 0; i < 2; i++) {
+    moverDerecha();
+    delay(400);
+    moverIzquierda();
+    delay(400);
+    moverAtras();
+    delay(400);
+    moverAdelante();
+    delay(400);
+    girarIzquierda();
+    delay(600);
+    girarDerecha();
+    delay(600);
+    moverDiagonalDerechaAdelante();
+    delay(400);
+    moverDiagonalIzquierdaAtras();
+    delay(400);
+  }
+}
+
+// 🎯 Calcula el tiempo para avanzar en línea recta según la distancia en cm
+int calcularTiempoAvanzar(int cm) {
+  // Ajusta la velocidad de tu carro: 60cm ≈ 1000ms
+  return (cm * 1000) / 60;
+}
+
+// Movimientos base para OMNI 🔥
+
+// ➡️ Mover hacia adelante
+void moverAdelante() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);  // Motor delante izquierda
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);  // Motor delante derecha
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);  // Motor trasero izquierda
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);  // Motor trasero derecha
+}
+
+// ⬅️ Mover hacia atrás
+void moverAtras() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+// ➡️ Strafe derecha (mover de lado hacia la derecha)
+void moverDerecha() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
+}
+
+// ⬅️ Strafe izquierda (mover de lado hacia la izquierda)
+void moverIzquierda() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+// ↪️ Girar derecha sobre su eje
+void girarDerecha() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+// ↩️ Girar izquierda sobre su eje
+void girarIzquierda() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
+}
+
+// 🔼➤ Movimiento en diagonal (adelante derecha)
+void moverDiagonalDerechaAdelante() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);  // adelante izquierda
+  digitalWrite(IN3, LOW); digitalWrite(IN4, LOW);   // adelante derecha (apagado)
+  digitalWrite(IN5, LOW); digitalWrite(IN6, LOW);   // trasero izquierda (apagado)
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);  // trasero derecha
+}
+
+// 🔽⬅️ Movimiento en diagonal (atrás izquierda)
+void moverDiagonalIzquierdaAtras() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, LOW);
+}
+
+// ✋ Detener todos los motores
+void detener() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, LOW);
+}
