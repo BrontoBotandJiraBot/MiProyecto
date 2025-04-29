@@ -1,0 +1,30 @@
+#include <SoftwareSerial.h>
+#include <DFRobotDFPlayerMini.h>
+
+// Conexiones del DFPlayer
+#define DFPLAYER_RX 10  // RX del DFPlayer al pin 10 del Arduino
+#define DFPLAYER_TX 11  // TX del DFPlayer al pin 11 del Arduino
+
+SoftwareSerial mySerial(DFPLAYER_TX, DFPLAYER_RX); // ¡OJO! TX -> RX, RX -> TX
+DFRobotDFPlayerMini myDFPlayer;
+
+void setup() {
+  Serial.begin(9600);       
+  mySerial.begin(9600);     
+
+  Serial.println("Iniciando DFPlayer...");
+
+  if (!myDFPlayer.begin(mySerial)) {
+    Serial.println("No se pudo iniciar DFPlayer Mini.");
+    while (true); // Se queda trabado si falla
+  }
+  
+  Serial.println("DFPlayer listo.");
+  
+  myDFPlayer.volume(25);    // Volumen de 0 a 30
+  myDFPlayer.randomAll();   // Reproduce una canción aleatoria de la SD
+}
+
+void loop() {
+  // No hacemos nada en el loop
+}
