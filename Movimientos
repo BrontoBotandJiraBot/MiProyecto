@@ -1,0 +1,286 @@
+#include <Bluepad32.h>
+
+// ------------------ Definiciones ------------------
+// Pines motores
+#define IN1 16
+#define IN2 17
+#define IN3 18
+#define IN4 19
+#define IN5 25
+#define IN6 33
+#define IN7 27
+#define IN8 26
+
+// Pines sensores ultrasónicos
+#define trigIzq 32
+#define echoIzq 35
+#define trigFrontal 4
+#define echoFrontal 5
+#define trigDer 2
+#define echoDer 15
+
+// Pines pulsadores
+#define BOTON_ATRAS 13
+#define BOTON_SIGUIENTE 14
+
+// Pines LED RGB
+#define PIN_R 21
+#define PIN_G 22
+#define PIN_B 23
+
+ControllerPtr myController = nullptr;
+
+int modo = 0; // 0 = Control Remoto, 1 = Explorador, 2 = Baile, 3 = Relajación
+
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 200;
+
+unsigned long lastBaileTime = 0;
+int pasoBaile = 0;
+
+bool cancionEnviada = false; // Para controlar que la canción solo se mande una vez
+
+// ------------------ Setup ------------------
+void setup() {
+  Serial.begin(115200);
+
+  // Motores
+  pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
+  pinMode(IN5, OUTPUT); pinMode(IN6, OUTPUT);
+  pinMode(IN7, OUTPUT); pinMode(IN8, OUTPUT);
+
+  // Sensores
+  pinMode(trigIzq, OUTPUT); pinMode(echoIzq, INPUT);
+  pinMode(trigFrontal, OUTPUT); pinMode(echoFrontal, INPUT);
+  pinMode(trigDer, OUTPUT); pinMode(echoDer, INPUT);
+
+  // Botones
+  pinMode(BOTON_ATRAS, INPUT_PULLUP);
+  pinMode(BOTON_SIGUIENTE, INPUT_PULLUP);
+
+  // LED RGB
+  pinMode(PIN_R, OUTPUT);
+  pinMode(PIN_G, OUTPUT);
+  pinMode(PIN_B, OUTPUT);
+
+  actualizarLedRGB();
+
+  // Bluepad32
+  BP32.setup(&onConnectedController, nullptr);
+  Serial.println("Esperando conexión del mando PS4...");
+}
+
+// ------------------ Loop ------------------
+void loop() {
+  leerBotones();
+
+  if (modo == 0) {
+    modoControlRemoto();
+  }
+  else if (modo == 1) {
+    modoExplorador();
+  }
+  else if (modo == 2) {
+    modoBaile();
+  }
+  else if (modo == 3) {
+    modoRelax();
+  }
+
+  delay(10);
+}
+
+// ------------------ Funciones de control de modos ------------------
+void leerBotones() {
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (digitalRead(BOTON_ATRAS) == LOW) {
+      modo--;
+      if (modo < 0) modo = 3;
+      actualizarLedRGB();
+      imprimirModo();
+      lastDebounceTime = millis();
+      pasoBaile = 0; 
+      cancionEnviada = false; // Reiniciar flag de canción
+    }
+    else if (digitalRead(BOTON_SIGUIENTE) == LOW) {
+      modo++;
+      if (modo > 3) modo = 0;
+      actualizarLedRGB();
+      imprimirModo();
+      lastDebounceTime = millis();
+      pasoBaile = 0;
+      cancionEnviada = false; // Reiniciar flag de canción
+    }
+  }
+}
+
+void imprimirModo() {
+  Serial.print("Cambiado a modo: ");
+  if (modo == 0) Serial.println("Control Remoto");
+  else if (modo == 1) Serial.println("Explorador");
+  else if (modo == 2) Serial.println("Baile");
+  else if (modo == 3) Serial.println("Relajacion");
+}
+
+void actualizarLedRGB() {
+  if (modo == 0) setColor(0, 0, 255);       // Azul
+  else if (modo == 1) setColor(0, 255, 0);   // Verde
+  else if (modo == 2) setColor(255, 0, 255); // Morado
+  else if (modo == 3) setColor(0, 255, 255); // Celeste
+}
+
+void setColor(int r, int g, int b) {
+  analogWrite(PIN_R, r);
+  analogWrite(PIN_G, g);
+  analogWrite(PIN_B, b);
+}
+
+// ------------------ Modo 0: Control Remoto ------------------
+void modoControlRemoto() {
+  BP32.update();
+
+  if (myController && myController->isConnected()) {
+    int joyY = -myController->axisRY(); 
+    int joyLX = myController->axisX();   
+
+    if (joyY > 100) {
+      avanzar();
+    } else if (joyY < -100) {
+      retroceder();
+    } else if (joyLX > 100) {
+      girarDerecha();
+    } else if (joyLX < -100) {
+      girarIzquierda();
+    } else {
+      detener();
+    }
+  }
+}
+
+void onConnectedController(ControllerPtr ctl) {
+  Serial.println("¡Mando conectado!");
+  myController = ctl;
+}
+
+// ------------------ Modo 1: Explorador ------------------
+void modoExplorador() {
+  long distanciaFrontal = medirDistancia(trigFrontal, echoFrontal);
+  long distanciaIzq = medirDistancia(trigIzq, echoIzq);
+  long distanciaDer = medirDistancia(trigDer, echoDer);
+
+  Serial.print("Frontal: "); Serial.print(distanciaFrontal); Serial.print(" cm | ");
+  Serial.print("Izq: "); Serial.print(distanciaIzq); Serial.print(" cm | ");
+  Serial.print("Der: "); Serial.println(distanciaDer);
+
+  if (distanciaFrontal < 20) {
+    detener();
+    delay(300);
+    if (distanciaIzq > distanciaDer) {
+      girarIzquierda();
+    } else {
+      girarDerecha();
+    }
+    delay(700);
+    detener();
+  } else {
+    avanzar();
+  }
+}
+
+// ------------------ Modo 2: Baile ------------------
+void modoBaile() {
+  unsigned long tiempoActual = millis();
+
+  if (tiempoActual - lastBaileTime > 400) {
+    lastBaileTime = tiempoActual;
+
+    switch (pasoBaile) {
+      case 0: avanzar(); break;
+      case 1: avanzar(); break;
+      case 2: girarDerecha(); break;
+      case 3: girarDerecha(); break;
+      case 4: retroceder(); break;
+      case 5: retroceder(); break;
+      case 6: girarIzquierda(); break;
+      case 7: girarIzquierda(); break;
+      case 8: detener(); break;
+      case 9: avanzar(); break;
+      case 10: girarDerecha(); break;
+      case 11: detener(); break;
+    }
+
+    pasoBaile++;
+    if (pasoBaile > 11) pasoBaile = 0;
+  }
+}
+
+// ------------------ Modo 3: Relajación ------------------
+void modoRelax() {
+  detener(); // Asegura que el carro no se mueva
+
+  if (!cancionEnviada) {
+    Serial.write(0x7E); // Enviar protocolo DFPlayer
+    Serial.write(0xFF);
+    Serial.write(0x06);
+    Serial.write(0x03); // Comando: reproducir canción por número
+    Serial.write(0x00);
+    Serial.write(0x00);
+    Serial.write(0x01); // Número de la canción (0001)
+    Serial.write(0xFE);
+    Serial.write(0xF7);
+    Serial.write(0xEF);
+
+    Serial.println("Canción de relajación enviada.");
+    cancionEnviada = true;
+  }
+}
+
+// ------------------ Movimiento ------------------
+void avanzar() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
+}
+
+void retroceder() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+void girarIzquierda() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
+}
+
+void girarDerecha() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+void detener() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, LOW);
+}
+
+// ------------------ Medir Distancia ------------------
+long medirDistancia(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duracion = pulseIn(echoPin, HIGH, 25000);
+  if (duracion == 0) return 400;
+  return duracion * 0.034 / 2;
+}
