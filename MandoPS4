@@ -1,0 +1,112 @@
+#include <Bluepad32.h>
+
+#define IN1_FRONT 16
+#define IN2_FRONT 17
+#define IN3_FRONT 18
+#define IN4_FRONT 19
+
+#define IN1_BACK 25
+#define IN2_BACK 33
+#define IN3_BACK 27
+#define IN4_BACK 26
+
+ControllerPtr myController = nullptr;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(IN1_FRONT, OUTPUT);
+  pinMode(IN2_FRONT, OUTPUT);
+  pinMode(IN3_FRONT, OUTPUT);
+  pinMode(IN4_FRONT, OUTPUT);
+  pinMode(IN1_BACK, OUTPUT);
+  pinMode(IN2_BACK, OUTPUT);
+  pinMode(IN3_BACK, OUTPUT);
+  pinMode(IN4_BACK, OUTPUT);
+
+  BP32.setup(&onConnectedController, nullptr);
+  Serial.println("Esperando conexión del mando PS4...");
+}
+
+void loop() {
+  BP32.update();
+
+  if (myController && myController->isConnected()) {
+    int joyY = -myController->axisRY();  // Adelante/atrás (invertido para que hacia adelante sea positivo)
+    int joyLX = myController->axisX();   // Giro izquierda/derecha
+
+    if (joyY > 100) {
+      moveForward();
+    } else if (joyY < -100) {
+      moveBackward();
+    } else if (joyLX > 100) {
+      rotateRight();
+    } else if (joyLX < -100) {
+      rotateLeft();
+    } else {
+      stopMotors();
+    }
+  }
+
+  delay(10);
+}
+
+void onConnectedController(ControllerPtr ctl) {
+  Serial.println("¡Mando conectado!");
+  myController = ctl;
+}
+
+void moveForward() {
+  digitalWrite(IN1_FRONT, HIGH);
+  digitalWrite(IN2_FRONT, LOW);
+  digitalWrite(IN3_FRONT, HIGH);
+  digitalWrite(IN4_FRONT, LOW);
+  digitalWrite(IN1_BACK, HIGH);
+  digitalWrite(IN2_BACK, LOW);
+  digitalWrite(IN3_BACK, HIGH);
+  digitalWrite(IN4_BACK, LOW);
+}
+
+void moveBackward() {
+  digitalWrite(IN1_FRONT, LOW);
+  digitalWrite(IN2_FRONT, HIGH);
+  digitalWrite(IN3_FRONT, LOW);
+  digitalWrite(IN4_FRONT, HIGH);
+  digitalWrite(IN1_BACK, LOW);
+  digitalWrite(IN2_BACK, HIGH);
+  digitalWrite(IN3_BACK, LOW);
+  digitalWrite(IN4_BACK, HIGH);
+}
+
+void rotateLeft() {
+  digitalWrite(IN1_FRONT, LOW);
+  digitalWrite(IN2_FRONT, HIGH);
+  digitalWrite(IN3_FRONT, HIGH);
+  digitalWrite(IN4_FRONT, LOW);
+  digitalWrite(IN1_BACK, HIGH);
+  digitalWrite(IN2_BACK, LOW);
+  digitalWrite(IN3_BACK, LOW);
+  digitalWrite(IN4_BACK, HIGH);
+}
+
+void rotateRight() {
+  digitalWrite(IN1_FRONT, HIGH);
+  digitalWrite(IN2_FRONT, LOW);
+  digitalWrite(IN3_FRONT, LOW);
+  digitalWrite(IN4_FRONT, HIGH);
+  digitalWrite(IN1_BACK, LOW);
+  digitalWrite(IN2_BACK, HIGH);
+  digitalWrite(IN3_BACK, HIGH);
+  digitalWrite(IN4_BACK, LOW);
+}
+
+void stopMotors() {
+  digitalWrite(IN1_FRONT, LOW);
+  digitalWrite(IN2_FRONT, LOW);
+  digitalWrite(IN3_FRONT, LOW);
+  digitalWrite(IN4_FRONT, LOW);
+  digitalWrite(IN1_BACK, LOW);
+  digitalWrite(IN2_BACK, LOW);
+  digitalWrite(IN3_BACK, LOW);
+  digitalWrite(IN4_BACK, LOW);
+}
