@@ -1,0 +1,106 @@
+// Pines sensores ultrasónicos
+#define trigIzq 32
+#define echoIzq 35
+#define trigFrontal 4
+#define echoFrontal 5
+#define trigDer 2
+#define echoDer 15
+
+// Pines motores
+#define IN1 16 // Delantero Izq
+#define IN2 17
+#define IN3 18 // Delantero Der
+#define IN4 19
+#define IN5 25 // Trasero Izq
+#define IN6 33
+#define IN7 27 // Trasero Der
+#define IN8 26
+
+void setup() {
+  Serial.begin(115200);
+
+  // Pines motores
+  pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
+  pinMode(IN5, OUTPUT); pinMode(IN6, OUTPUT);
+  pinMode(IN7, OUTPUT); pinMode(IN8, OUTPUT);
+
+  // Pines sensores
+  pinMode(trigIzq, OUTPUT); pinMode(echoIzq, INPUT);
+  pinMode(trigFrontal, OUTPUT); pinMode(echoFrontal, INPUT);
+  pinMode(trigDer, OUTPUT); pinMode(echoDer, INPUT);
+}
+
+void loop() {
+  long distanciaFrontal = medirDistancia(trigFrontal, echoFrontal);
+  long distanciaIzq = medirDistancia(trigIzq, echoIzq);
+  long distanciaDer = medirDistancia(trigDer, echoDer);
+
+  // Mostrar distancias en el monitor serial
+  Serial.print("Frontal: "); Serial.print(distanciaFrontal); Serial.print(" cm | ");
+  Serial.print("Izq: "); Serial.print(distanciaIzq); Serial.print(" cm | ");
+  Serial.print("Der: "); Serial.println(distanciaDer); Serial.print(" cm\n");
+
+  // Movimiento según distancias
+  if (distanciaFrontal < 20) {
+    detener();
+    delay(300);
+    if (distanciaIzq > distanciaDer) {
+      girarIzquierda();
+    } else {
+      girarDerecha();
+    }
+    delay(700);  // ⬅️ Ajustado para que gire 90 grados (ajústalo si hace falta)
+    detener();   // ⬅️ Se detiene después de girar
+  } else {
+    avanzar();
+  }
+
+  delay(100); // Pausa para suavizar el bucle
+}
+
+// 🛠 Función para medir la distancia con validación
+long medirDistancia(int trigPin, int echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duracion = pulseIn(echoPin, HIGH, 25000); // Timeout de 25 ms
+  if (duracion == 0) return 400; // Si no hay eco, devuelve distancia lejana
+
+  return duracion * 0.034 / 2;
+}
+
+// 🚗 Movimiento hacia adelante
+void avanzar() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
+}
+
+// ↩️ Gira a la izquierda
+void girarIzquierda() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
+}
+
+// ↪️ Gira a la derecha
+void girarDerecha() {
+  digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+// ✋ Detiene todos los motores
+void detener() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, LOW);
+  digitalWrite(IN7, LOW); digitalWrite(IN8, LOW);
+}
