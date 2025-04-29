@@ -30,7 +30,7 @@
 
 ControllerPtr myController = nullptr;
 
-int modo = 0; // 0 = Control Remoto, 1 = Explorador, 2 = Baile, 3 = Relajación
+int modo = 0; // 0 = Control Remoto, 1 = Explorador, 2 = Baile, 3 = Relajación, 4 = Concentración
 
 unsigned long lastDebounceTime = 0;
 unsigned long debounceDelay = 200;
@@ -87,6 +87,9 @@ void loop() {
   else if (modo == 3) {
     modoRelax();
   }
+  else if (modo == 4) {
+    modoConcentracion(); // Nuevo modo de concentración
+  }
 
   delay(10);
 }
@@ -96,7 +99,7 @@ void leerBotones() {
   if ((millis() - lastDebounceTime) > debounceDelay) {
     if (digitalRead(BOTON_ATRAS) == LOW) {
       modo--;
-      if (modo < 0) modo = 3;
+      if (modo < 0) modo = 4;  // Cambiar a 4 para el modo concentración
       actualizarLedRGB();
       imprimirModo();
       lastDebounceTime = millis();
@@ -105,7 +108,7 @@ void leerBotones() {
     }
     else if (digitalRead(BOTON_SIGUIENTE) == LOW) {
       modo++;
-      if (modo > 3) modo = 0;
+      if (modo > 4) modo = 0; // Volver al modo 0 después de concentración
       actualizarLedRGB();
       imprimirModo();
       lastDebounceTime = millis();
@@ -121,6 +124,7 @@ void imprimirModo() {
   else if (modo == 1) Serial.println("Explorador");
   else if (modo == 2) Serial.println("Baile");
   else if (modo == 3) Serial.println("Relajacion");
+  else if (modo == 4) Serial.println("Concentracion");  // Agregado para el nuevo modo
 }
 
 void actualizarLedRGB() {
@@ -128,6 +132,7 @@ void actualizarLedRGB() {
   else if (modo == 1) setColor(0, 255, 0);   // Verde
   else if (modo == 2) setColor(255, 0, 255); // Morado
   else if (modo == 3) setColor(0, 255, 255); // Celeste
+  else if (modo == 4) setColor(255, 255, 0); // Amarillo para concentración
 }
 
 void setColor(int r, int g, int b) {
@@ -236,6 +241,27 @@ void modoRelax() {
   }
 }
 
+// ------------------ Modo 4: Concentración ------------------
+void modoConcentracion() {
+  detener(); // Asegura que el carro no se mueva
+
+  if (!cancionEnviada) {
+    Serial.write(0x7E); // Enviar protocolo DFPlayer
+    Serial.write(0xFF);
+    Serial.write(0x06);
+    Serial.write(0x03); // Comando: reproducir canción por número
+    Serial.write(0x00);
+    Serial.write(0x00);
+    Serial.write(0x02); // Número de la canción (0002) para concentración
+    Serial.write(0xFE);
+    Serial.write(0xF7);
+    Serial.write(0xEF);
+
+    Serial.println("Canción de concentración enviada.");
+    cancionEnviada = true;
+  }
+}
+
 // ------------------ Movimiento ------------------
 void avanzar() {
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
@@ -251,18 +277,18 @@ void retroceder() {
   digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
 }
 
-void girarIzquierda() {
-  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
-  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
-  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
-  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
-}
-
 void girarDerecha() {
   digitalWrite(IN1, HIGH); digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW); digitalWrite(IN4, HIGH);
   digitalWrite(IN5, HIGH); digitalWrite(IN6, LOW);
   digitalWrite(IN7, LOW); digitalWrite(IN8, HIGH);
+}
+
+void girarIzquierda() {
+  digitalWrite(IN1, LOW); digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH); digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW); digitalWrite(IN6, HIGH);
+  digitalWrite(IN7, HIGH); digitalWrite(IN8, LOW);
 }
 
 void detener() {
@@ -272,15 +298,14 @@ void detener() {
   digitalWrite(IN7, LOW); digitalWrite(IN8, LOW);
 }
 
-// ------------------ Medir Distancia ------------------
+// ------------------ Función de distancia ------------------
 long medirDistancia(int trigPin, int echoPin) {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-
-  long duracion = pulseIn(echoPin, HIGH, 25000);
-  if (duracion == 0) return 400;
-  return duracion * 0.034 / 2;
+  long duracion = pulseIn(echoPin, HIGH);
+  long distancia = (duracion / 2) / 29.1;
+  return distancia;
 }
